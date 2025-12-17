@@ -1,39 +1,51 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "crypto";
 
 const client = new DynamoDBClient({});
-const dynamo = DynamoDBDocumentClient.from(client);
+const ddb = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
   try {
-    const body = JSON.parse(event.body);
-
-    const { nome, cidade } = body;
-
-    if (!nome || !cidade) {
+    // Garantir que o body é string e não undefined
+    const bodyString = event.body || '{}';
+    let body;
+    try {
+      body = JSON.parse(bodyString);
+    } catch (parseErr) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Campos obrigatórios faltando." }),
+        body: JSON.stringify({ error: "Body inválido: precisa ser JSON" }),
       };
     }
 
-    const id = Date.now().toString();
+    // Validar campos
+    if (!body.praia || !body.data || !body.descricao) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Campos obrigatórios: praia, data, descricao" }),
+      };
+    }
 
-    await dynamo.send(
-      new PutCommand({
-        TableName: "Praias",
-        Item: { id, nome, cidade },
-      })
-    );
+    const item = {
+      id: randomUUID(),
+      praia: body.praia,
+      data: body.data,
+      descricao: body.descricao,
+      criadoEm: new Date().toISOString(),
+    };
+
+    await ddb.send(new PutCommand({ TableName: "Ataques", Item: item }));
 
     return {
-      statusCode: 200,
-      body: JSON.stringify({ message: "Praia cadastrada!", id }),
+      statusCode: 201,
+      body: JSON.stringify({ message: "Ataque registrado com sucesso!", item }),
     };
   } catch (err) {
+    console.error("Erro interno:", err, "EVENT:", event);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ error: "Erro interno", details: err.message }),
     };
   }
 };
