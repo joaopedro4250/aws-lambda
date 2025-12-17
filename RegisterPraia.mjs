@@ -8,12 +8,13 @@ export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
 
-    const { nome, cidade } = body;
+    const { nome, cidade, lat, lng } = body;
 
-    if (!nome || !cidade) {
+    // Verificação dos campos obrigatórios
+    if (!nome || !cidade || lat === undefined || lng === undefined) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Campos obrigatórios faltando." }),
+        body: JSON.stringify({ error: "Campos obrigatórios: nome, cidade, lat, lng" }),
       };
     }
 
@@ -22,7 +23,13 @@ export const handler = async (event) => {
     await dynamo.send(
       new PutCommand({
         TableName: "Praias",
-        Item: { id, nome, cidade },
+        Item: {
+          id,
+          nome,
+          cidade,
+          lat,    // agora salva a latitude
+          lng     // agora salva a longitude
+        },
       })
     );
 
