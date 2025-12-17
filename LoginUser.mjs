@@ -58,9 +58,23 @@ export const handler = async (event) => {
       { expiresIn: "2h" }
     );
 
+    // 🔥 SE É SENHA TEMPORÁRIA → manda aviso para o front
+    if (user.senhaTemporaria === true) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          token,
+          precisaTrocarSenha: true
+        }),
+      };
+    }
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({
+        token,
+        precisaTrocarSenha: false
+      }),
     };
   } catch (err) {
     return {
